@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 
-// --- Data ---
 type RecycleType = "paper" | "cardboard" | "all";
 
 interface RecyclePoint {
@@ -43,66 +41,114 @@ function createEcoIcon(type: RecycleType[]) {
   const emoji = type.includes("all") ? "♻️" : type.includes("paper") ? "📄" : "📦";
   return L.divIcon({
     className: "",
-    html: `
-      <div style="
-        width:42px; height:42px; border-radius: 50% 50% 50% 0;
-        background:${color}; transform:rotate(-45deg);
-        display:flex; align-items:center; justify-content:center;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-        border: 2px solid rgba(255,255,255,0.5);
-      ">
-        <span style="transform:rotate(45deg); font-size:18px; line-height:1;">${emoji}</span>
-      </div>
-    `,
+    html: `<div style="width:42px;height:42px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.5)"><span style="transform:rotate(45deg);font-size:18px;line-height:1">${emoji}</span></div>`,
     iconSize: [42, 42],
     iconAnchor: [21, 42],
     popupAnchor: [0, -44],
   });
 }
 
-function LocateButton({ userPos }: { userPos: [number, number] | null }) {
-  const map = useMap();
-  if (!userPos) return null;
-  return (
-    <div
-      onClick={() => map.flyTo(userPos, 15, { duration: 1.2 })}
-      style={{
-        position: "absolute", bottom: 80, right: 10, zIndex: 1000,
-        background: "#1a4d2e", color: "white",
-        width: 34, height: 34, borderRadius: 6,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-      }}
-      title="Моё местоположение"
-    >
-      <span style={{ fontSize: 18 }}>📍</span>
-    </div>
-  );
-}
-
+// Animated counter
 function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [current, setCurrent] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          let start = 0;
-          const step = Math.ceil(target / 60);
-          const timer = setInterval(() => {
-            start += step;
-            if (start >= target) { setCurrent(target); clearInterval(timer); }
-            else setCurrent(start);
-          }, 25);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.4 }
-    );
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        let start = 0;
+        const step = Math.ceil(target / 60);
+        const timer = setInterval(() => {
+          start += step;
+          if (start >= target) { setCurrent(target); clearInterval(timer); }
+          else setCurrent(start);
+        }, 25);
+        observer.disconnect();
+      }
+    }, { threshold: 0.4 });
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [target]);
   return <span ref={ref}>{current.toLocaleString("ru-RU")}{suffix}</span>;
+}
+
+// Map component using raw Leaflet
+function LeafletMap({ points, userPos }: { points: RecyclePoint[]; userPos: [number, number] | null }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+
+  // Init map once
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+    const map = L.map(mapRef.current, { center: [54.9000, 52.3000], zoom: 14, zoomControl: true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>',
+    }).addTo(map);
+    mapInstanceRef.current = map;
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Update point markers when points change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+    points.forEach(point => {
+      const marker = L.marker([point.lat, point.lng], { icon: createEcoIcon(point.type) });
+      const typeBadges = point.type.map(t =>
+        `<span style="background:${TYPE_COLORS[t]};color:white;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;margin:2px">${TYPE_LABELS[t]}</span>`
+      ).join("");
+      marker.bindPopup(`
+        <div style="font-family:'Golos Text',sans-serif;min-width:200px">
+          <div style="font-weight:700;font-size:15px;color:#1a4d2e;margin-bottom:4px">${point.name}</div>
+          <div style="font-size:13px;color:#5a7a65;margin-bottom:4px">📍 ${point.address}</div>
+          <div style="font-size:12px;color:#4a9e6b;margin-bottom:6px">⏰ ${point.hours}</div>
+          <div style="margin-bottom:8px">${typeBadges}</div>
+          <div style="background:#f4f8f0;border-radius:8px;padding:6px 10px;font-size:12px;color:#1a4d2e;font-weight:600">♻️ Собрано: ${point.collected} кг</div>
+        </div>
+      `);
+      marker.addTo(map);
+      markersRef.current.push(marker);
+    });
+  }, [points]);
+
+  // Update user marker
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (userMarkerRef.current) { userMarkerRef.current.remove(); userMarkerRef.current = null; }
+    if (userPos) {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:16px;height:16px;background:#2d7a45;border:3px solid white;border-radius:50%;box-shadow:0 0 0 6px rgba(45,122,69,0.25)"></div>`,
+        iconSize: [16, 16], iconAnchor: [8, 8],
+      });
+      userMarkerRef.current = L.marker(userPos, { icon }).addTo(map).bindPopup("<b>Вы здесь</b>");
+    }
+  }, [userPos]);
+
+  return (
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      <div ref={mapRef} style={{ height: "100%", width: "100%" }} />
+      {userPos && mapInstanceRef.current && (
+        <button
+          onClick={() => mapInstanceRef.current?.flyTo(userPos, 15, { duration: 1.2 })}
+          style={{
+            position: "absolute", bottom: 80, right: 10, zIndex: 1000,
+            background: "#1a4d2e", color: "white", width: 34, height: 34,
+            borderRadius: 6, border: "none", cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)", fontSize: 18,
+          }}
+          title="Моё местоположение"
+        >📍</button>
+      )}
+    </div>
+  );
 }
 
 export default function Index() {
@@ -111,8 +157,6 @@ export default function Index() {
   const [maxDistance, setMaxDistance] = useState<number>(5);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [formSent, setFormSent] = useState(false);
-
-  const ALM_CENTER: [number, number] = [54.9000, 52.3000];
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -139,6 +183,12 @@ export default function Index() {
 
   const totalCollected = POINTS.reduce((s, p) => s + p.collected, 0);
 
+  const navItems = [
+    { id: "map" as const, label: "Карта", emoji: "🗺️" },
+    { id: "stats" as const, label: "Статистика", emoji: "📊" },
+    { id: "contacts" as const, label: "Контакты", emoji: "✉️" },
+  ];
+
   return (
     <div className="min-h-screen texture-bg">
       {/* Header */}
@@ -147,47 +197,27 @@ export default function Index() {
           <div className="flex items-center gap-3">
             <span className="text-3xl animate-leaf">🌿</span>
             <div>
-              <div className="font-display text-xl font-bold tracking-wide text-[var(--color-forest)]">
-                ЭкоЛист
-              </div>
-              <div className="text-[10px] text-[var(--color-moss)] font-medium leading-none tracking-widest uppercase">
-                Альметьевск
-              </div>
+              <div className="font-display text-xl font-bold tracking-wide text-[var(--color-forest)]">ЭкоЛист</div>
+              <div className="text-[10px] text-[var(--color-moss)] font-medium leading-none tracking-widest uppercase">Альметьевск</div>
             </div>
           </div>
           <nav className="hidden md:flex items-center gap-8">
-            {(["map", "stats", "contacts"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setActiveSection(s)}
-                className={`nav-link text-sm font-semibold transition-colors ${
-                  activeSection === s
-                    ? "text-[var(--color-leaf)]"
-                    : "text-[var(--color-forest)] hover:text-[var(--color-leaf)]"
-                }`}
-              >
-                {s === "map" ? "Карта" : s === "stats" ? "Статистика" : "Контакты"}
+            {navItems.map((s) => (
+              <button key={s.id} onClick={() => setActiveSection(s.id)}
+                className={`nav-link text-sm font-semibold transition-colors ${activeSection === s.id ? "text-[var(--color-leaf)]" : "text-[var(--color-forest)] hover:text-[var(--color-leaf)]"}`}>
+                {s.label}
               </button>
             ))}
           </nav>
           <div className="flex items-center gap-2 bg-[var(--color-forest)] text-white px-4 py-2 rounded-full text-sm font-semibold">
-            <span>♻️</span>
-            <span>{filteredPoints.length} точек</span>
+            <span>♻️</span><span>{filteredPoints.length} точек</span>
           </div>
         </div>
-        {/* Mobile nav */}
         <div className="md:hidden flex border-t border-[var(--color-mist)]">
-          {(["map", "stats", "contacts"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setActiveSection(s)}
-              className={`flex-1 py-2 text-xs font-semibold transition-colors ${
-                activeSection === s
-                  ? "bg-[var(--color-forest)] text-white"
-                  : "text-[var(--color-forest)]"
-              }`}
-            >
-              {s === "map" ? "🗺️ Карта" : s === "stats" ? "📊 Статистика" : "✉️ Контакты"}
+          {navItems.map((s) => (
+            <button key={s.id} onClick={() => setActiveSection(s.id)}
+              className={`flex-1 py-2 text-xs font-semibold transition-colors ${activeSection === s.id ? "bg-[var(--color-forest)] text-white" : "text-[var(--color-forest)]"}`}>
+              {s.emoji} {s.label}
             </button>
           ))}
         </div>
@@ -198,13 +228,9 @@ export default function Index() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="animate-fade-up mb-6">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-[var(--color-forest)] leading-tight">
-              Карта переработки
-              <br />
-              <span className="text-[var(--color-moss)]">листовок в городе</span>
+              Карта переработки<br /><span className="text-[var(--color-moss)]">листовок в городе</span>
             </h1>
-            <p className="mt-2 text-[var(--color-moss)] text-lg">
-              Найди ближайший пункт приёма рекламных материалов
-            </p>
+            <p className="mt-2 text-[var(--color-moss)] text-lg">Найди ближайший пункт приёма рекламных материалов</p>
           </div>
 
           {/* Filters */}
@@ -216,91 +242,30 @@ export default function Index() {
               { id: "cardboard", label: "Картон", emoji: "📦" },
               { id: "all", label: "Все типы сразу", emoji: "♻️" },
             ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setActiveFilter(f.id)}
-                className={`filter-chip ${activeFilter === f.id ? "active" : ""}`}
-              >
-                <span>{f.emoji}</span>
-                <span>{f.label}</span>
+              <button key={f.id} onClick={() => setActiveFilter(f.id)} className={`filter-chip ${activeFilter === f.id ? "active" : ""}`}>
+                <span>{f.emoji}</span><span>{f.label}</span>
               </button>
             ))}
-
             {userPos && (
               <>
                 <div className="h-6 w-px bg-[var(--color-mist)] mx-2 hidden sm:block" />
-                <span className="text-sm font-semibold text-[var(--color-forest)]">
-                  📍 До {maxDistance} км
-                </span>
-                <input
-                  type="range"
-                  min={1} max={10} value={maxDistance}
+                <span className="text-sm font-semibold text-[var(--color-forest)]">📍 До {maxDistance} км</span>
+                <input type="range" min={1} max={10} value={maxDistance}
                   onChange={(e) => setMaxDistance(+e.target.value)}
-                  className="accent-[var(--color-forest)] w-28"
-                />
+                  className="accent-[var(--color-forest)] w-28" />
               </>
             )}
             {!userPos && (
-              <button
-                onClick={() => navigator.geolocation?.getCurrentPosition(
-                  (p) => setUserPos([p.coords.latitude, p.coords.longitude])
-                )}
-                className="filter-chip ml-auto"
-              >
-                <span>📍</span>
-                <span>Моё местоположение</span>
+              <button onClick={() => navigator.geolocation?.getCurrentPosition((p) => setUserPos([p.coords.latitude, p.coords.longitude]))}
+                className="filter-chip ml-auto">
+                <span>📍</span><span>Моё местоположение</span>
               </button>
             )}
           </div>
 
           {/* Map */}
           <div className="animate-fade-up-2 rounded-2xl overflow-hidden shadow-xl border border-[var(--color-mist)]" style={{ height: 520 }}>
-            <MapContainer center={ALM_CENTER} zoom={14} style={{ height: "100%", width: "100%" }}>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {filteredPoints.map((point) => (
-                <Marker key={point.id} position={[point.lat, point.lng]} icon={createEcoIcon(point.type)}>
-                  <Popup>
-                    <div style={{ fontFamily: "'Golos Text', sans-serif", minWidth: 200 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: "#1a4d2e", marginBottom: 4 }}>
-                        {point.name}
-                      </div>
-                      <div style={{ fontSize: 13, color: "#5a7a65", marginBottom: 6 }}>📍 {point.address}</div>
-                      <div style={{ fontSize: 12, color: "#4a9e6b", marginBottom: 6 }}>⏰ {point.hours}</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
-                        {point.type.map((t) => (
-                          <span key={t} style={{
-                            background: TYPE_COLORS[t], color: "white",
-                            borderRadius: 999, padding: "2px 8px",
-                            fontSize: 11, fontWeight: 600,
-                          }}>
-                            {TYPE_LABELS[t]}
-                          </span>
-                        ))}
-                      </div>
-                      <div style={{ background: "#f4f8f0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#1a4d2e", fontWeight: 600 }}>
-                        ♻️ Собрано: {point.collected} кг
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-              {userPos && (
-                <Marker
-                  position={userPos}
-                  icon={L.divIcon({
-                    className: "",
-                    html: `<div style="width:16px;height:16px;background:#2d7a45;border:3px solid white;border-radius:50%;box-shadow:0 0 0 6px rgba(45,122,69,0.25)"></div>`,
-                    iconSize: [16, 16], iconAnchor: [8, 8],
-                  })}
-                >
-                  <Popup><b>Вы здесь</b></Popup>
-                </Marker>
-              )}
-              <LocateButton userPos={userPos} />
-            </MapContainer>
+            <LeafletMap points={filteredPoints} userPos={userPos} />
           </div>
 
           {/* Point list */}
@@ -308,9 +273,7 @@ export default function Index() {
             {filteredPoints.map((p) => (
               <div key={p.id} className="glass-card rounded-xl p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">
-                    {p.type.includes("all") ? "♻️" : p.type.includes("paper") ? "📄" : "📦"}
-                  </span>
+                  <span className="text-2xl">{p.type.includes("all") ? "♻️" : p.type.includes("paper") ? "📄" : "📦"}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-[var(--color-forest)] text-sm truncate">{p.name}</div>
                     <div className="text-xs text-[var(--color-moss)] mt-0.5">{p.address}</div>
@@ -367,14 +330,8 @@ export default function Index() {
                 <div key={p.id} className="flex items-center gap-3">
                   <div className="w-36 text-sm text-[var(--color-forest)] font-medium truncate shrink-0">{p.name}</div>
                   <div className="flex-1 bg-[var(--color-mist)] rounded-full h-5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full flex items-center justify-end pr-2"
-                      style={{
-                        width: `${(p.collected / 420) * 100}%`,
-                        background: "linear-gradient(90deg, var(--color-moss), var(--color-leaf))",
-                        transition: "width 1s ease-out",
-                      }}
-                    >
+                    <div className="h-full rounded-full flex items-center justify-end pr-2"
+                      style={{ width: `${(p.collected / 420) * 100}%`, background: "linear-gradient(90deg, var(--color-moss), var(--color-leaf))", transition: "width 1s ease-out" }}>
                       <span className="text-[11px] text-white font-bold">{p.collected}</span>
                     </div>
                   </div>
@@ -390,10 +347,7 @@ export default function Index() {
               { label: "Все типы сразу", emoji: "♻️", count: POINTS.filter(p => p.type.includes("all")).length, color: "#1a4d2e" },
             ].map((t) => (
               <div key={t.label} className="glass-card rounded-2xl p-5 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
-                  style={{ background: `${t.color}22` }}>
-                  {t.emoji}
-                </div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0" style={{ background: `${t.color}22` }}>{t.emoji}</div>
                 <div>
                   <div className="font-display text-3xl font-bold" style={{ color: t.color }}>{t.count}</div>
                   <div className="text-sm text-[var(--color-moss)] font-medium">{t.label}</div>
@@ -432,9 +386,7 @@ export default function Index() {
                 { emoji: "⏰", label: "Часы работы", value: "Пн–Пт 9:00–18:00" },
               ].map((c) => (
                 <div key={c.label} className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--color-forest)] flex items-center justify-center text-2xl shrink-0">
-                    {c.emoji}
-                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-[var(--color-forest)] flex items-center justify-center text-2xl shrink-0">{c.emoji}</div>
                   <div>
                     <div className="text-xs text-[var(--color-moss)] font-semibold uppercase tracking-wider">{c.label}</div>
                     <div className="text-[var(--color-forest)] font-semibold mt-0.5">{c.value}</div>
@@ -459,9 +411,7 @@ export default function Index() {
                   <div className="text-6xl mb-4">🌿</div>
                   <div className="font-display text-2xl font-bold text-[var(--color-forest)] mb-2">Спасибо!</div>
                   <p className="text-[var(--color-moss)]">Мы ответим в ближайшее время.</p>
-                  <button onClick={() => setFormSent(false)} className="mt-5 text-sm text-[var(--color-leaf)] underline">
-                    Отправить ещё раз
-                  </button>
+                  <button onClick={() => setFormSent(false)} className="mt-5 text-sm text-[var(--color-leaf)] underline">Отправить ещё раз</button>
                 </div>
               ) : (
                 <div className="glass-card rounded-2xl p-6">
@@ -491,11 +441,9 @@ export default function Index() {
                       <textarea rows={4} placeholder="Расскажите подробнее..."
                         className="w-full px-4 py-3 rounded-xl border-2 border-[var(--color-mist)] bg-white/60 text-[var(--color-forest)] placeholder:text-[var(--color-sage)] focus:outline-none focus:border-[var(--color-leaf)] transition-colors text-sm resize-none" />
                     </div>
-                    <button
-                      onClick={() => setFormSent(true)}
+                    <button onClick={() => setFormSent(true)}
                       className="w-full py-3.5 rounded-xl font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                      style={{ background: "linear-gradient(135deg, var(--color-forest), var(--color-leaf))" }}
-                    >
+                      style={{ background: "linear-gradient(135deg, var(--color-forest), var(--color-leaf))" }}>
                       🌿 Отправить сообщение
                     </button>
                   </div>
@@ -507,9 +455,7 @@ export default function Index() {
           <div className="animate-fade-up-3 mt-8 rounded-2xl p-6 border-2 border-dashed border-[var(--color-sage)] text-center">
             <div className="text-3xl mb-2">🤝</div>
             <div className="font-display text-lg font-bold text-[var(--color-forest)]">Хочешь стать партнёром?</div>
-            <p className="text-sm text-[var(--color-moss)] mt-1 mb-4">
-              Организации, школы и торговые центры — присоединяйтесь к экопрограмме Альметьевска
-            </p>
+            <p className="text-sm text-[var(--color-moss)] mt-1 mb-4">Организации, школы и торговые центры — присоединяйтесь к экопрограмме Альметьевска</p>
             <button className="px-6 py-2.5 rounded-full text-sm font-bold bg-[var(--color-forest)] text-white hover:bg-[var(--color-leaf)] transition-colors">
               Стать партнёром
             </button>
@@ -517,7 +463,6 @@ export default function Index() {
         </div>
       )}
 
-      {/* Footer */}
       <footer className="mt-12 border-t border-[var(--color-mist)] py-6 text-center text-sm text-[var(--color-moss)]">
         <span className="text-xl mr-2">🌿</span>
         <span className="font-semibold text-[var(--color-forest)]">ЭкоЛист Альметьевск</span>
