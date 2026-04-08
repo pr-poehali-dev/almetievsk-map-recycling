@@ -15,13 +15,13 @@ interface RecyclePoint {
 }
 
 const POINTS: RecyclePoint[] = [
-  { id: 1, name: "Городской парк 60-летия нефти Татарстана", address: "ул. Радищева, 22Б", type: ["all"], lat: 54.9021, lng: 52.3015, hours: "09:00–21:00", collected: 340 },
-  { id: 2, name: "МФЦ Альметьевск", address: "ул. Гафиатуллина, 1", type: ["paper", "cardboard"], lat: 54.8985, lng: 52.2970, hours: "08:00–20:00", collected: 210 },
-  { id: 3, name: "Школа №18", address: "ул. Радищева, 5", type: ["paper"], lat: 54.9055, lng: 52.3080, hours: "08:00–16:00", collected: 185 },
-  { id: 4, name: "Парк «Нефтяник»", address: "ул. Шевченко, 22", type: ["all"], lat: 54.8960, lng: 52.3120, hours: "Круглосуточно", collected: 420 },
-  { id: 5, name: "Библиотека им. Пушкина", address: "ул. Маяковского, 3", type: ["paper"], lat: 54.9010, lng: 52.2935, hours: "09:00–19:00", collected: 160 },
-  { id: 6, name: "ГорДК «Нефтяник»", address: "пр. Строителей, 15", type: ["cardboard", "all"], lat: 54.8930, lng: 52.2990, hours: "10:00–22:00", collected: 290 },
-  { id: 7, name: "Рынок «Центральный»", address: "ул. Тельмана, 8", type: ["all"], lat: 54.9070, lng: 52.3050, hours: "07:00–18:00", collected: 375 },
+  { id: 1, name: "ПАО «Экосервис» — пункт приёма", address: "ул. Дружбы, 8А", type: ["all"], lat: 54.8835, lng: 52.3190, hours: "Пн–Пт 09:00–18:00", collected: 520 },
+  { id: 2, name: "Пункт приёма вторсырья", address: "ул. Индустриальная, 10/3", type: ["paper", "cardboard"], lat: 54.8780, lng: 52.3280, hours: "Пн–Пт 08:00–17:00", collected: 310 },
+  { id: 3, name: "Экосервис — пункт приёма батареек", address: "ул. 70 лет Октября, 3", type: ["all"], lat: 54.9060, lng: 52.3030, hours: "Круглосуточно", collected: 185 },
+  { id: 4, name: "Экосервис — контейнер раздельного сбора", address: "ул. Гафиатуллина, 47/1", type: ["paper", "cardboard"], lat: 54.9010, lng: 52.2960, hours: "Пн–Пт 08:00–17:00", collected: 270 },
+  { id: 5, name: "Городской парк 60-летия нефти Татарстана", address: "ул. Радищева, 22Б", type: ["all"], lat: 54.9021, lng: 52.3015, hours: "Круглосуточно", collected: 420 },
+  { id: 6, name: "Пункт приёма макулатуры", address: "пр-т Габдуллы Тукая, 9А ст4", type: ["paper", "cardboard"], lat: 54.8950, lng: 52.2870, hours: "Пн–Пт 08:00–17:00", collected: 290 },
+  { id: 7, name: "Экосервис — контейнер для пластика и стекла", address: "ул. Геофизическая, 1В", type: ["all"], lat: 54.8870, lng: 52.3100, hours: "Круглосуточно", collected: 375 },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
