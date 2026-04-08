@@ -15,13 +15,13 @@ interface RecyclePoint {
 }
 
 const POINTS: RecyclePoint[] = [
-  { id: 1, name: "ТЦ «Меркурий»", address: "ул. Ленина, 156", type: ["all"], lat: 54.9021, lng: 52.3015, hours: "09:00–21:00", collected: 340 },
-  { id: 2, name: "МФЦ Альметьевск", address: "ул. Гафиатуллина, 1", type: ["paper", "cardboard"], lat: 54.8985, lng: 52.2970, hours: "08:00–20:00", collected: 210 },
-  { id: 3, name: "Школа №18", address: "ул. Радищева, 5", type: ["paper"], lat: 54.9055, lng: 52.3080, hours: "08:00–16:00", collected: 185 },
-  { id: 4, name: "Парк «Нефтяник»", address: "ул. Шевченко, 22", type: ["all"], lat: 54.8960, lng: 52.3120, hours: "Круглосуточно", collected: 420 },
-  { id: 5, name: "Библиотека им. Пушкина", address: "ул. Маяковского, 3", type: ["paper"], lat: 54.9010, lng: 52.2935, hours: "09:00–19:00", collected: 160 },
-  { id: 6, name: "ГорДК «Нефтяник»", address: "пр. Строителей, 15", type: ["cardboard", "all"], lat: 54.8930, lng: 52.2990, hours: "10:00–22:00", collected: 290 },
-  { id: 7, name: "Рынок «Центральный»", address: "ул. Тельмана, 8", type: ["all"], lat: 54.9070, lng: 52.3050, hours: "07:00–18:00", collected: 375 },
+  { id: 1, name: "Пункт приёма «ВторРесурс»", address: "ул. Ленина, 48", type: ["all"], lat: 54.9001, lng: 52.2988, hours: "08:00–18:00", collected: 420 },
+  { id: 2, name: "«ЭкоТатарстан»", address: "ул. Герцена, 14", type: ["paper", "cardboard"], lat: 54.8963, lng: 52.3051, hours: "09:00–17:00", collected: 310 },
+  { id: 3, name: "Школа №2 (акция «Бумажный бум»)", address: "ул. Гафиатуллина, 28", type: ["paper"], lat: 54.9038, lng: 52.3072, hours: "Пн–Пт 08:00–15:00", collected: 175 },
+  { id: 4, name: "«ТатВтормет»", address: "ул. Строителей, 40", type: ["all"], lat: 54.8921, lng: 52.3134, hours: "08:00–18:00", collected: 390 },
+  { id: 5, name: "ТЦ «Берёзка» (контейнер)", address: "ул. Белоглазова, 55", type: ["paper"], lat: 54.9052, lng: 52.2941, hours: "Круглосуточно", collected: 145 },
+  { id: 6, name: "«Альмет-Эко»", address: "пр-т Строителей, 25а", type: ["cardboard", "all"], lat: 54.8940, lng: 52.2972, hours: "09:00–19:00", collected: 265 },
+  { id: 7, name: "Рынок «Восток» (контейнер)", address: "ул. Советская, 181", type: ["all"], lat: 54.9076, lng: 52.3028, hours: "08:00–20:00", collected: 330 },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
