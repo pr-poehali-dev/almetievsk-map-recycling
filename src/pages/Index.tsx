@@ -15,7 +15,7 @@ interface RecyclePoint {
 }
 
 const POINTS: RecyclePoint[] = [
-  { id: 1, name: "Городской парк 60-летия нефти Татарстана", address: "ул. Ленина, 156", type: ["all"], lat: 54.9021, lng: 52.3015, hours: "09:00–21:00", collected: 340 },
+  { id: 1, name: "Городской парк 60-летия нефти Татарстана", address: "ул. Радищева, 22Б", type: ["all"], lat: 54.9021, lng: 52.3015, hours: "09:00–21:00", collected: 340 },
   { id: 2, name: "МФЦ Альметьевск", address: "ул. Гафиатуллина, 1", type: ["paper", "cardboard"], lat: 54.8985, lng: 52.2970, hours: "08:00–20:00", collected: 210 },
   { id: 3, name: "Школа №18", address: "ул. Радищева, 5", type: ["paper"], lat: 54.9055, lng: 52.3080, hours: "08:00–16:00", collected: 185 },
   { id: 4, name: "Парк «Нефтяник»", address: "ул. Шевченко, 22", type: ["all"], lat: 54.8960, lng: 52.3120, hours: "Круглосуточно", collected: 420 },
